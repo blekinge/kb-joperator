@@ -14,31 +14,14 @@
  */
 package dk.kb.platform.joke;
 
-import static io.javaoperatorsdk.operator.api.reconciler.Constants.SAME_AS_CONTROLLER;
-import static io.javaoperatorsdk.operator.api.reconciler.Constants.WATCH_CURRENT_NAMESPACE;
-
 import dk.kb.platform.joke.JokeRequestSpec.ExcludedTopic;
 import dk.kb.platform.joke.JokeRequestStatus.State;
-
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
 import dk.kb.platform.joke.jokerestclient.JokeModel;
 import dk.kb.platform.joke.jokerestclient.JokeService;
-import io.fabric8.kubernetes.api.model.HasMetadata;
 import io.fabric8.kubernetes.api.model.OwnerReference;
-import jakarta.inject.Inject;
-
-import org.eclipse.microprofile.rest.client.inject.RestClient;
-
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.javaoperatorsdk.operator.api.config.informer.Informer;
+import io.javaoperatorsdk.operator.api.reconciler.Constants;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.api.reconciler.ControllerConfiguration;
 import io.javaoperatorsdk.operator.api.reconciler.Reconciler;
@@ -46,17 +29,26 @@ import io.javaoperatorsdk.operator.api.reconciler.UpdateControl;
 import io.quarkiverse.operatorsdk.annotations.CSVMetadata;
 import io.quarkiverse.operatorsdk.annotations.CSVMetadata.Icon;
 import io.quarkiverse.operatorsdk.annotations.RBACRule;
+import jakarta.inject.Inject;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.logging.Logger;
 import org.jetbrains.annotations.NotNull;
+
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @CSVMetadata(bundleName = "joke-operator",
              requiredCRDs = @CSVMetadata.RequiredCRD(kind = "Joke",
                                                      name = Joke.NAME,
                                                      version = Joke.VERSION),
-             
              icon = @Icon(fileName = "icon.png", mediatype = "image/png"))
 
-@ControllerConfiguration(informer = @Informer(namespaces = SAME_AS_CONTROLLER))
+@ControllerConfiguration(informer = @Informer(namespaces = Constants.WATCH_CURRENT_NAMESPACE))
 
 @RBACRule(apiGroups = Joke.GROUP, resources = "jokes", verbs = RBACRule.ALL)
 
@@ -81,11 +73,10 @@ public class JokeRequestReconciler implements Reconciler<JokeRequest> {
     }
     
     private @NotNull UpdateControl<JokeRequest> reconcile(JokeRequest jokeRequest) {
-        logger.infov("Starting reconcile with request {0}", jokeRequest);
         final var spec = jokeRequest.getSpec();
-        
         {
             JokeRequestStatus status = jokeRequest.getStatus();
+            logger.infov("Starting reconcile with request {0}", status);
             if (status != null && State.CREATED == status.state() && Objects.equals(spec, status.appliedSpec)) {
                 if (status.jokeId() != null) {
                     if (k8s.resources(Joke.class)
