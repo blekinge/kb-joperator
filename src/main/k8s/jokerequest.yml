@@ -1,0 +1,7 @@
+apiVersion: "joke.platform.kb.dk/v1alpha1"
+kind: JokeRequest
+metadata:
+  name: default
+spec:
+  category: Any
+  safe: false
